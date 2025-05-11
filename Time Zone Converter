@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Zone Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.34/moment-timezone-with-data.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333;
+            --primary-color: #007bff;
+            --primary-hover: #0056b3;
+            --secondary-color: #6c757d;
+            --border-color: #dee2e6;
+            --shadow: 0 2px 10px rgba(0,0,0,0.1);
+            --input-bg: #fff;
+            --input-border: #ced4da;
+            --danger-color: #dc3545;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            line-height: 1.6;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            background-color: var(--card-bg);
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        h1, h2 {
+            color: var(--primary-color);
+            margin-top: 0;
+        }
+        h2 {
+            margin-top: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+
+        select, input[type="datetime-local"], input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid var(--input-border);
+            border-radius: 4px;
+            box-sizing: border-box;
+            background-color: var(--input-bg);
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 10px 15px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            transition: background-color 0.2s ease;
+            margin-right: 5px;
+            margin-bottom: 5px;
+        }
+        button:hover {
+            background-color: var(--primary-hover);
+        }
+        button.secondary {
+            background-color: var(--secondary-color);
+        }
+        button.secondary:hover {
+            background-color: #545b62;
+        }
+        button.danger {
+            background-color: var(--danger-color);
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+
+        .time-zone-list {
+            margin-top: 15px;
+        }
+
+        .zone-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-left: 5px solid var(--primary-color);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .zone-card.source {
+            border-left-color: #28a745; /* Green for source */
+        }
+        .zone-card.destination {
+             border-left-color: #ffc107; /* Orange for destination */
+        }
+
+        .zone-header {
+            font-weight: bold;
+            font-size: 1.1em;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .zone-time, .zone-current-time, .zone-offset, .zone-diff {
+            font-size: 0.95em;
+        }
+        .zone-time strong {
+            font-size: 1.2em;
+        }
+        .zone-current-time {
+            color: var(--secondary-color);
+            font-style: italic;
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 220px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .tooltip .tooltiptext::after {
+            content: "";
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            margin-left: -5px;
+            border-width: 5px;
+            border-style: solid;
+            border-color: #555 transparent transparent transparent;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #savedSetupsContainer {
+            margin-top: 10px;
+        }
+        .saved-setup-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            margin-bottom: 5px;
+            background-color: #f9f9f9;
+        }
+        .saved-setup-item span {
+            cursor: pointer;
+        }
+        .saved-setup-item span:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            h1 {
+                font-size: 1.8em;
+            }
+            select, input[type="datetime-local"], button {
+                font-size: 0.95rem;
+            }
+            .zone-card {
+                padding: 10px;
+            }
+        }
+        @media (max-width: 480px) {
+            button {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            .control-group {
+                padding: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Time Zone Converter</h1>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+        <!-- Source Time Selection -->
+        <div class="control-group">
+            <h2>Source Time</h2>
+            <div>
+                <label for="sourceTimeZone">Base Time Zone:</label>
+                <select id="sourceTimeZone" aria-label="Base Time Zone"></select>
+            </div>
+            <div>
+                <label for="sourceDateTime">Date and Time:</label>
+                <input type="datetime-local" id="sourceDateTime" aria-label="Source Date and Time">
+            </div>
+            <button id="setCurrentTimeBtn">Use Current Local Time</button>
+            <div class="zone-card source" id="sourceTimePreviewCard" style="display:none;">
+                <div class="zone-header">
+                    <span id="sourcePreviewZoneName">Source Zone</span>
+                </div>
+                <div class="zone-current-time">Current: <span id="sourcePreviewCurrentTime"></span></div>
+            </div>
+        </div>
+
+        <!-- Destination Time Zones -->
+        <div class="control-group">
+            <h2>Destination Time Zones</h2>
+            <div>
+                <label for="destinationTimeZoneSelect">Add Destination Zone:</label>
+                <select id="destinationTimeZoneSelect" aria-label="Select destination time zone"></select>
+                <button id="addDestinationZoneBtn">Add Zone</button>
+                <button id="swapZonesBtn" class="secondary" title="Swap source with first destination">Swap Source/Dest</button>
+            </div>
+            <div id="destinationZonesContainer" class="time-zone-list" role="list">
+                <!-- Destination zones will be added here -->
+            </div>
+        </div>
+        
+        <!-- Results Display -->
+        <div class="control-group">
+            <h2>Conversion Results</h2>
+            <div id="resultsContainer" class="time-zone-list">
+                <!-- Conversion results will be displayed here -->
+            </div>
+        </div>
+
+        <!-- Saved Time Zone Sets -->
+        <div class="control-group">
+            <h2>Saved Time Zone Sets</h2>
+            <div>
+                <input type="text" id="saveSetName" placeholder="Name for this set (e.g., Work Team)">
+                <button id="saveSetBtn">Save Current Set</button>
+            </div>
+            <div id="savedSetupsContainer">
+                <p><em>No saved sets yet.</em></p>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const sourceTimeZoneSelect = document.getElementById('sourceTimeZone');
+            const sourceDateTimeInput = document.getElementById('sourceDateTime');
+            const setCurrentTimeBtn = document.getElementById('setCurrentTimeBtn');
+            const destinationTimeZoneSelect = document.getElementById('destinationTimeZoneSelect');
+            const addDestinationZoneBtn = document.getElementById('addDestinationZoneBtn');
+            const swapZonesBtn = document.getElementById('swapZonesBtn');
+            const destinationZonesContainer = document.getElementById('destinationZonesContainer');
+            const resultsContainer = document.getElementById('resultsContainer');
+            const errorMessageDiv = document.getElementById('errorMessage');
+
+            const sourcePreviewCard = document.getElementById('sourceTimePreviewCard');
+            const sourcePreviewZoneName = document.getElementById('sourcePreviewZoneName');
+            const sourcePreviewCurrentTime = document.getElementById('sourcePreviewCurrentTime');
+
+            const saveSetNameInput = document.getElementById('saveSetName');
+            const saveSetBtn = document.getElementById('saveSetBtn');
+            const savedSetupsContainer = document.getElementById('savedSetupsContainer');
+
+            let selectedDestinationZones = [];
+            let currentTimeInterval;
+
+            // Populate time zone dropdowns
+            const timeZones = moment.tz.names();
+            function populateTimeZoneDropdown(selectElement) {
+                timeZones.forEach(tz => {
+                    const option = document.createElement('option');
+                    option.value = tz;
+                    option.textContent = tz;
+                    selectElement.appendChild(option);
+                });
+            }
+
+            populateTimeZoneDropdown(sourceTimeZoneSelect);
+            populateTimeZoneDropdown(destinationTimeZoneSelect);
+
+            // Set default source time zone (e.g., user's local or a common one)
+            const userTimeZone = moment.tz.guess();
+            sourceTimeZoneSelect.value = timeZones.includes(userTimeZone) ? userTimeZone : 'UTC';
+            
+            // --- Core Functions ---
+
+            function displayError(message) {
+                errorMessageDiv.textContent = message;
+                errorMessageDiv.style.display = message ? 'block' : 'none';
+            }
+
+            function convertAndDisplayTimes() {
+                displayError(''); // Clear previous errors
+                const sourceZone = sourceTimeZoneSelect.value;
+                const sourceDateTimeValue = sourceDateTimeInput.value;
+
+                if (!sourceZone) {
+                    displayError("Please select a source time zone.");
+                    return;
+                }
+
+                let sourceMoment;
+                if (sourceDateTimeValue) {
+                    sourceMoment = moment.tz(sourceDateTimeValue, "YYYY-MM-DDTHH:mm", sourceZone);
+                } else {
+                    // If no date/time is input, use current time in source zone for conversion logic
+                    sourceMoment = moment.tz(sourceZone);
+                    // And update the input field to reflect this
+                    sourceDateTimeInput.value = sourceMoment.format("YYYY-MM-DDTHH:mm");
+                }
+                
+                if (!sourceMoment.isValid()) {
+                    displayError("Invalid date/time input for the source time zone.");
+                    resultsContainer.innerHTML = ''; // Clear previous results
+                    return;
+                }
+
+                resultsContainer.innerHTML = ''; // Clear previous results
+
+                // Display Source Time in Results
+                displayZoneResult(sourceMoment, sourceZone, "Source", null);
+
+                // Display Destination Times
+                selectedDestinationZones.forEach(destZone => {
+                    displayZoneResult(sourceMoment, destZone, "Destination", sourceMoment);
+                });
+                updateCurrentTimePreviews();
+            }
+            
+            function formatTimeDifference(sourceMoment, targetMoment) {
+                const diffMillis = targetMoment.valueOf() - sourceMoment.valueOf();
+                const diffHours = Math.floor(diffMillis / (1000 * 60 * 60));
+                const diffMinutes = Math.floor((diffMillis % (1000 * 60 * 60)) / (1000 * 60));
+                
+                let diffString = "";
+                if (diffHours !== 0) {
+                    diffString += `${diffHours}h `;
+                }
+                if (diffMinutes !== 0 || diffHours === 0) { // Show minutes if hours are 0
+                    diffString += `${diffMinutes}m`;
+                }
+                if (diffString === "") return "Same time";
+
+                return (diffMillis >= 0 ? "+" : "") + diffString.trim() + " from source";
+            }
+
+
+            function displayZoneResult(baseMoment, zoneName, type, sourceMomentForDiff) {
+                const targetMoment = baseMoment.clone().tz(zoneName);
+                
+                const card = document.createElement('div');
+                card.className = `zone-card ${type.toLowerCase()}`;
+                card.setAttribute('role', 'listitem');
+
+                const abbreviation = targetMoment.format('z');
+                const offset = targetMoment.format('Z');
+
+                let timeDifferenceHtml = '';
+                if (type === "Destination" && sourceMomentForDiff) {
+                    const diffText = formatTimeDifference(sourceMomentForDiff.clone().tz(sourceTimeZoneSelect.value), targetMoment);
+                    timeDifferenceHtml = `<div class="zone-diff" title="Difference from source time">${diffText}</div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="zone-header">
+                        <span>${zoneName} (${abbreviation})</span>
+                        ${type === "Destination" ? `<button class="danger micro-btn" data-zone="${zoneName}" onclick="removeDestinationZoneFromResult(this)">×</button>` : ''}
+                    </div>
+                    <div class="zone-time" title="Converted Time">
+                        <strong>${targetMoment.format('YYYY-MM-DD HH:mm:ss')}</strong>
+                    </div>
+                    <div class="zone-offset" title="UTC Offset">UTC ${offset}</div>
+                    <div class="zone-current-time" id="current-time-${zoneName.replace(/[^a-zA-Z0-9]/g, '')}">
+                        Current: Loading...
+                    </div>
+                    ${timeDifferenceHtml}
+                    <button class="copy-btn secondary micro-btn" data-clipboard-text="${targetMoment.format('YYYY-MM-DD HH:mm:ss z (Z)')}">Copy</button>
+                `;
+                resultsContainer.appendChild(card);
+            }
+            
+            // Make removeDestinationZoneFromResult globally accessible for inline onclick
+            window.removeDestinationZoneFromResult = function(buttonElement) {
+                const zoneToRemove = buttonElement.getAttribute('data-zone');
+                // Also remove from the destinationZonesContainer display
+                const displayCardToRemove = destinationZonesContainer.querySelector(`button[data-zone="${zoneToRemove}"]`);
+                if (displayCardToRemove) {
+                    displayCardToRemove.parentElement.remove();
+                }
+                // And from the actual list
+                selectedDestinationZones = selectedDestinationZones.filter(tz => tz !== zoneToRemove);
+                convertAndDisplayTimes();
+            }
+
+
+            function updateCurrentTimePreviews() {
+                if (currentTimeInterval) clearInterval(currentTimeInterval);
+
+                function updatePreviews() {
+                    // Source Preview
+                    const sourceZone = sourceTimeZoneSelect.value;
+                    if (sourceZone) {
+                        sourcePreviewCard.style.display = 'block';
+                        sourcePreviewZoneName.textContent = sourceZone;
+                        sourcePreviewCurrentTime.textContent = moment().tz(sourceZone).format('HH:mm:ss z');
+                    } else {
+                        sourcePreviewCard.style.display = 'none';
+                    }
+
+                    // Results Previews (for cards in resultsContainer)
+                    const allZonesInResults = [sourceZone, ...selectedDestinationZones].filter(Boolean);
+                    allZonesInResults.forEach(zone => {
+                        const currentDateTimeEl = document.getElementById(`current-time-${zone.replace(/[^a-zA-Z0-9]/g, '')}`);
+                        if (currentDateTimeEl) {
+                            currentDateTimeEl.textContent = `Current: ${moment().tz(zone).format('HH:mm:ss z')}`;
+                        }
+                    });
+                }
+                updatePreviews(); // Initial call
+                currentTimeInterval = setInterval(updatePreviews, 1000);
+            }
+
+            function addDestinationZone() {
+                const zoneToAdd = destinationTimeZoneSelect.value;
+                if (zoneToAdd && !selectedDestinationZones.includes(zoneToAdd)) {
+                    selectedDestinationZones.push(zoneToAdd);
+                    renderDestinationZonePills();
+                    convertAndDisplayTimes();
+                } else if (selectedDestinationZones.includes(zoneToAdd)) {
+                    alert(`${zoneToAdd} is already added.`);
+                }
+            }
+            
+            function renderDestinationZonePills() {
+                destinationZonesContainer.innerHTML = ''; // Clear current pills
+                selectedDestinationZones.forEach(zone => {
+                    const pill = document.createElement('div');
+                    pill.className = 'zone-card destination'; // Re-use some styling
+                    pill.style.flexDirection = 'row';
+                    pill.style.justifyContent = 'space-between';
+                    pill.style.alignItems = 'center';
+                    pill.style.padding = '8px 12px';
+                    
+                    const zoneNameSpan = document.createElement('span');
+                    zoneNameSpan.textContent = zone;
+                    
+                    const removeBtn = document.createElement('button');
+                    removeBtn.textContent = '×';
+                    removeBtn.className = 'danger micro-btn';
+                    removeBtn.title = `Remove ${zone}`;
+                    removeBtn.setAttribute('data-zone', zone);
+                    removeBtn.onclick = () => removeDestinationZone(zone);
+                    
+                    pill.appendChild(zoneNameSpan);
+                    pill.appendChild(removeBtn);
+                    destinationZonesContainer.appendChild(pill);
+                });
+            }
+
+            function removeDestinationZone(zoneToRemove) {
+                selectedDestinationZones = selectedDestinationZones.filter(tz => tz !== zoneToRemove);
+                renderDestinationZonePills();
+                convertAndDisplayTimes();
+            }
+
+
+            function swapSourceAndFirstDestination() {
+                if (selectedDestinationZones.length === 0) {
+                    alert("Add at least one destination zone to swap.");
+                    return;
+                }
+                const oldSourceZone = sourceTimeZoneSelect.value;
+                const firstDestinationZone = selectedDestinationZones[0];
+
+                sourceTimeZoneSelect.value = firstDestinationZone;
+                selectedDestinationZones.shift(); // Remove first destination
+                if (oldSourceZone) { // Add old source as a destination if it's valid
+                    selectedDestinationZones.unshift(oldSourceZone); // Add to beginning
+                }
+                renderDestinationZonePills();
+                convertAndDisplayTimes();
+            }
+
+            function setCurrentLocalTime() {
+                // Sets the input to current local time, then conversion will use sourceZone
+                const now = moment();
+                sourceDateTimeInput.value = now.format("YYYY-MM-DDTHH:mm");
+                convertAndDisplayTimes();
+            }
+
+            // --- Saved Sets Functionality ---
+            let savedSets = JSON.parse(localStorage.getItem('timeZoneSets')) || {};
+
+            function renderSavedSets() {
+                savedSetupsContainer.innerHTML = '';
+                const setNames = Object.keys(savedSets);
+                if (setNames.length === 0) {
+                    savedSetupsContainer.innerHTML = '<p><em>No saved sets yet.</em></p>';
+                    return;
+                }
+                setNames.forEach(name => {
+                    const setItem = document.createElement('div');
+                    setItem.className = 'saved-setup-item';
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = name;
+                    nameSpan.title = `Load set: ${name}`;
+                    nameSpan.onclick = () => loadSet(name);
+                    
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.textContent = 'Delete';
+                    deleteBtn.className = 'danger micro-btn';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation(); // Prevent triggering loadSet
+                        deleteSet(name);
+                    };
+                    
+                    setItem.appendChild(nameSpan);
+                    setItem.appendChild(deleteBtn);
+                    savedSetupsContainer.appendChild(setItem);
+                });
+            }
+
+            function saveCurrentSet() {
+                const setName = saveSetNameInput.value.trim();
+                if (!setName) {
+                    alert("Please enter a name for this set.");
+                    return;
+                }
+                if (Object.keys(savedSets).length >= 10 && !savedSets[setName]) { // Limit number of sets
+                    alert("Maximum number of saved sets (10) reached. Delete an old one to save new.");
+                    return;
+                }
+                savedSets[setName] = {
+                    source: sourceTimeZoneSelect.value,
+                    destinations: [...selectedDestinationZones]
+                };
+                localStorage.setItem('timeZoneSets', JSON.stringify(savedSets));
+                saveSetNameInput.value = ''; // Clear input
+                renderSavedSets();
+                alert(`Set "${setName}" saved!`);
+            }
+
+            function loadSet(setName) {
+                const set = savedSets[setName];
+                if (set) {
+                    sourceTimeZoneSelect.value = set.source;
+                    selectedDestinationZones = [...set.destinations];
+                    renderDestinationZonePills();
+                    // If sourceDateTimeInput is empty, setCurrentLocalTime will fill it
+                    // otherwise, we respect the user's chosen time.
+                    if (!sourceDateTimeInput.value) {
+                         setCurrentLocalTime(); // This will also trigger convertAndDisplayTimes
+                    } else {
+                         convertAndDisplayTimes();
+                    }
+                    alert(`Set "${setName}" loaded!`);
+                }
+            }
+
+            function deleteSet(setName) {
+                if (confirm(`Are you sure you want to delete the set "${setName}"?`)) {
+                    delete savedSets[setName];
+                    localStorage.setItem('timeZoneSets', JSON.stringify(savedSets));
+                    renderSavedSets();
+                }
+            }
+            
+            // --- Event Listeners ---
+            sourceTimeZoneSelect.addEventListener('change', convertAndDisplayTimes);
+            sourceDateTimeInput.addEventListener('input', convertAndDisplayTimes);
+            setCurrentTimeBtn.addEventListener('click', setCurrentLocalTime);
+            addDestinationZoneBtn.addEventListener('click', addDestinationZone);
+            swapZonesBtn.addEventListener('click', swapSourceAndFirstDestination);
+            saveSetBtn.addEventListener('click', saveCurrentSet);
+
+            resultsContainer.addEventListener('click', function(event) {
+                if (event.target.classList.contains('copy-btn')) {
+                    const textToCopy = event.target.getAttribute('data-clipboard-text');
+                    navigator.clipboard.writeText(textToCopy)
+                        .then(() => {
+                            const originalText = event.target.textContent;
+                            event.target.textContent = 'Copied!';
+                            setTimeout(() => event.target.textContent = originalText, 1500);
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy: ', err);
+                            alert('Failed to copy text.');
+                        });
+                }
+            });
+
+            // --- Initial Setup ---
+            setCurrentLocalTime(); // Set current time and do initial conversion
+            renderSavedSets(); // Load and display any saved sets
+
+        });
+    </script>
+</body>
+</html>
